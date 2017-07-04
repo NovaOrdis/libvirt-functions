@@ -16,6 +16,7 @@ function main() {
         echo " stop" 1>&2;
         echo " status" 1>&2;
         echo " snapshot" 1>&2;
+        echo " list-snapshots" 1>&2;
         exit 1;
     }
 
@@ -27,6 +28,8 @@ function main() {
         status;
     elif [ "${command}" = "snapshot" ]; then
         snapshot $2;
+    elif [ "${command}" = "list-snapshots" ]; then
+        list-snapshots;
     else
         echo "[error]: unknown command '${command}'" 1>&2;
         exit 1;
@@ -96,6 +99,18 @@ function snapshot() {
         qemu-img snapshot -c ${snapshot_tag} ${image_volume} && echo "'${snapshot_tag}' applied to ${image_volume}" || exit 1
     done
 }
+
+#
+# List disk image snapshots
+#
+function list-snapshots() {
+
+    for i in ${guests}; do
+        local image_volume=/main-storage-pool/${i}.qcow2
+        qemu-img snapshot -l ${image_volume} || exit 1
+    done
+}
+
 
 main $@
 
