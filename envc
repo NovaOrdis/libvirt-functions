@@ -1,0 +1,93 @@
+#!/bin/bash
+
+[ -f $(dirname $0)/../libvirt-functions/libvirt-functions ] && . $(dirname $0)/../libvirt-functions/libvirt-functions || { echo "$(dirname $0)/../libvirt-functions/libvirt-functions not found" 1>&2; exit 1; }
+
+guests="in appproxy support master1 master2 master3 infranode1 infranode2 node1 node2"
+
+function main() {
+
+    local command=$1
+
+    [ -z "${command}" ] && { echo "[error]: a command must be specified" 1>&2; exit 1; }
+
+    if [ "${command}" = "start" ]; then
+        start;
+    elif [ "${command}" = "stop" ]; then
+        stop;
+    elif [ "${command}" = "status" ]; then
+        status;
+    else
+        echo "[error]: unknown command '${command}'" 1>&2;
+        exit 1;
+    fi
+}
+
+function start() {
+
+   echo "starting ..."
+
+    for i in ${guests}; do
+        virsh start ${i} || { echo "failed to start guest '${i}'" 1>&2; exit 1; }
+    done
+
+}
+
+function stop() {
+
+   echo "stopping ..."
+
+    for i in ${guests}; do
+        virsh shutdown ${i} || { echo "failed to shut down guest '${i}'" 1>&2; exit 1; }
+    done
+
+}
+
+function status() {
+
+    for i in ${guests}; do
+        local state
+        state=$(virsh domstate ${i}) || exit 1
+        echo "${i}: ${state}"
+    done
+}
+
+#
+# Snapshots all 
+#
+function snapshot() {
+
+local snapshot_tag=$1
+
+    [ -z "${snapshot_tag}" ] && { echo "[error]: a snapshot tag must be specified" 1>&2; exit 1; }
+
+    # make sure all guests are down. If at least one is up, fail
+
+    for i in ${guests}; do
+        local state
+        state=$(virsh domstate ${i}) || exit 1
+        if [ "${state}" != "shut off" ]; then
+           echo "'${i}' is not shut down, cannot snapshot environment" 1>&2
+           exit 1
+        fi
+    done
+
+    # list the qcow2 images
+
+    for i in ${guests}; do
+        local image_volume=/main-storage-pool/${i}.qcow2
+        virsh vol-info ${image_volume} || { echo "failed to query ${image_volume}" 1>&2; exit 1; }
+    done
+
+    # snapshot all qcow2 images
+
+    for i in ${guests}; do
+        local image_volume=/main-storage-pool/${i}.qcow2
+        qemu-img snapshot -c ${snapshot_tag} ${image_volume} && echo "'${snapshot_tag}' applied to ${image_volume}" || exit 1
+    done
+}
+
+main $@
+
+
+
+
