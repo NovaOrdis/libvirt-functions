@@ -12,6 +12,10 @@ function main() {
 
         echo "[error]: a command must be specified" 1>&2;
         echo "available commands:" 1>&2;
+        echo " start" 1>&2;
+        echo " stop" 1>&2;
+        echo " status" 1>&2;
+        echo " snapshot" 1>&2;
         exit 1;
     }
 
