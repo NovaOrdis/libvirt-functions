@@ -15,7 +15,7 @@ function main() {
         echo " start [vmid]" 1>&2;
         echo " stop [vmid]" 1>&2;
         echo " status [vmid]" 1>&2;
-        echo " snapshot [vmid]" 1>&2;
+        echo " snapshot <snapshot_tag> [vmid]" 1>&2;
         echo " list-snapshots [vmid]" 1>&2;
         exit 1;
     }
@@ -27,7 +27,7 @@ function main() {
     elif [ "${command}" = "status" ]; then
         status $2;
     elif [ "${command}" = "snapshot" ]; then
-        snapshot $2;
+        snapshot $2 $3;
     elif [ "${command}" = "list-snapshots" ]; then
         list-snapshots $2;
     else
