@@ -2,14 +2,13 @@
 
 [ -f $(dirname $0)/../libvirt-functions/libvirt-functions ] && . $(dirname $0)/../libvirt-functions/libvirt-functions || { echo "$(dirname $0)/../libvirt-functions/libvirt-functions not found" 1>&2; exit 1; }
 
-
 guests="in appproxy support master1 master2 master3 infranode1 infranode2 node1 node2"
 
 function main() {
 
     local snapshot_tag=$1
 
-    [ -z "${snapshot_tag}" ] && { echo "a snapshot tag must be specified" 1>&2; exit 1; }
+    [ -z "${snapshot_tag}" ] && { echo "[error]: a snapshot tag must be specified" 1>&2; exit 1; }
 
     # make sure all guests are down. If at least one is up, fail
 
@@ -29,8 +28,12 @@ function main() {
         virsh vol-info ${image_volume} || { echo "failed to query ${image_volume}" 1>&2; exit 1; }
     done
 
-    # get the snapshot tag
     # snapshot all qcow2 images
+
+    for i in ${guests}; do
+        local image_volume=/main-storage-pool/${i}.qcow2
+        qemu-img snapshot -c ${snapshot_tag} ${image_volume} && echo "'${snapshot_tag}' applied to ${image_volume}" || exit 1
+    done
     
 }
 
