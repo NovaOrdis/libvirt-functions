@@ -25,11 +25,11 @@ function main() {
     elif [ "${command}" = "stop" ]; then
         stop $2;
     elif [ "${command}" = "status" ]; then
-        status;
+        status $2;
     elif [ "${command}" = "snapshot" ]; then
         snapshot $2;
     elif [ "${command}" = "list-snapshots" ]; then
-        list-snapshots;
+        list-snapshots $2;
     else
         echo "[error]: unknown command '${command}'" 1>&2;
         exit 1;
