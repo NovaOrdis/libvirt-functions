@@ -107,6 +107,7 @@ function list-snapshots() {
 
     for i in ${guests}; do
         local image_volume=/main-storage-pool/${i}.qcow2
+        echo "Virtual machine: ${i}, image volume: ${image_volume}"
         qemu-img snapshot -l ${image_volume} || exit 1
     done
 }
