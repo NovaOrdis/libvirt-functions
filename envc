@@ -2,7 +2,7 @@
 
 [ -f $(dirname $0)/../libvirt-functions/libvirt-functions ] && . $(dirname $0)/../libvirt-functions/libvirt-functions || { echo "$(dirname $0)/../libvirt-functions/libvirt-functions not found" 1>&2; exit 1; }
 
-guests="in appproxy support master1 master2 master3 infranode1 infranode2 node1 node2"
+ALL_GUESTS="in appproxy support master1 master2 master3 infranode1 infranode2 node1 node2"
 
 function main() {
 
@@ -14,9 +14,9 @@ function main() {
         echo "available commands:" 1>&2;
         echo " start [vmid]" 1>&2;
         echo " stop [vmid]" 1>&2;
-        echo " status" 1>&2;
-        echo " snapshot" 1>&2;
-        echo " list-snapshots" 1>&2;
+        echo " status [vmid]" 1>&2;
+        echo " snapshot [vmid]" 1>&2;
+        echo " list-snapshots [vmid]" 1>&2;
         exit 1;
     }
 
@@ -36,39 +36,46 @@ function main() {
     fi
 }
 
+#
+# arg1 (optional) the vmid to be started
+#
 function start() {
 
-    local vmid=$1
+    local names
+    names=$(filter $1) || exit 1
 
-    echo -n "starting "; [ -z "${vmid}" ] && echo "all ..." || echo "$(vmid-to-guest-name ${vmid}) ..."
+    echo "starting ${names} ..."
 
-    [ -n "${vmid}" ] && guests="$(vmid-to-guest-name ${vmid})"
-    [ -z "${guests}" ] && exit 1
-
-    for i in ${guests}; do
+    for i in ${names}; do
         virsh start ${i} || { echo "failed to start guest '${i}'" 1>&2; exit 1; }
     done
-
 }
 
+#
+# arg1 (optional) the vmid to be stopped
+#
 function stop() {
 
-    local vmid=$1
+    local names
+    names=$(filter $1) || exit 1
 
-    echo -n "stopping "; [ -z "${vmid}" ] && echo "all ..." || echo "$(vmid-to-guest-name ${vmid}) ..."
+    echo "stopping ${names} ..."
 
-    [ -n "${vmid}" ] && guests="$(vmid-to-guest-name ${vmid})"
-    [ -z "${guests}" ] && exit 1
-
-    for i in ${guests}; do
+    for i in ${names}; do
         virsh shutdown ${i} || { echo "failed to shut down guest '${i}'" 1>&2; exit 1; }
     done
 
 }
 
+#
+# arg1 (optional) the vmid to be reported
+#
 function status() {
 
-    for i in ${guests}; do
+    local names
+    names=$(filter $1) || exit 1
+
+    for i in ${names}; do
         local state
         state=$(virsh domstate ${i}) || exit 1
         echo "${i}: ${state}"
@@ -76,7 +83,10 @@ function status() {
 }
 
 #
-# Snapshots all qcow2 images of the environment.
+# Snapshots all qcow2 images of the environment, or just the specified image.
+#
+# arg1 (required) the snapshot tag
+# arg2 (optional) the vmid to be snapshot
 #
 function snapshot() {
 
@@ -84,9 +94,12 @@ function snapshot() {
 
     [ -z "${snapshot_tag}" ] && { echo "[error]: a snapshot tag must be specified" 1>&2; exit 1; }
 
-    # make sure all guests are down. If at least one is up, fail
+    local names
+    names=$(filter $2) || exit 1
 
-    for i in ${guests}; do
+    # make sure the target guests are down. If at least one is up, fail
+
+    for i in ${names}; do
         local state
         state=$(virsh domstate ${i}) || exit 1
         if [ "${state}" != "shut off" ]; then
@@ -97,14 +110,14 @@ function snapshot() {
 
     # list the qcow2 images
 
-    for i in ${guests}; do
+    for i in ${names}; do
         local image_volume=/main-storage-pool/${i}.qcow2
         virsh vol-info ${image_volume} || { echo "failed to query ${image_volume}" 1>&2; exit 1; }
     done
 
     # snapshot all qcow2 images
 
-    for i in ${guests}; do
+    for i in ${names}; do
         local image_volume=/main-storage-pool/${i}.qcow2
         qemu-img snapshot -c ${snapshot_tag} ${image_volume} && echo "'${snapshot_tag}' applied to ${image_volume}" || exit 1
     done
@@ -113,11 +126,17 @@ function snapshot() {
 #
 # List disk image snapshots
 #
+# arg1 (optional) the vmid to query
+#
+#
 function list-snapshots() {
+
+    local names
+    names=$(filter $1) || exit 1
 
     echo ""
 
-    for i in ${guests}; do
+    for i in ${names}; do
         local image_volume=/main-storage-pool/${i}.qcow2
         echo "Virtual machine: ${i}, image volume: ${image_volume}"
         qemu-img snapshot -l ${image_volume} || exit 1
@@ -164,6 +183,25 @@ function vmid-to-guest-name() {
     fi
 }
 
+#
+# filters the guest list based on arguments, and returns the result to stdout
+#
+# arg1 (optional) a specific vmid
+#
+function filter() {
+
+    local vmid=$1
+
+    [ -z "${vmid}" ] && { echo "${ALL_GUESTS}"; return 0; }
+
+    local name
+    name=$(vmid-to-guest-name ${vmid}) || exit 1
+
+    [ -z "${name}" ] && { echo "filter: '${vmid}' did not select any guest name" 1>&2; exit 1; }
+
+    echo "${name}"
+
+}
 main $@
 
 
