@@ -17,6 +17,7 @@ function main() {
         echo " status [vmid]" 1>&2;
         echo " snapshot <snapshot_tag> [vmid]" 1>&2;
         echo " list-snapshots [vmid]" 1>&2;
+        echo " restore <snapshot_tag> [vmid]" 1>&2;
         exit 1;
     }
 
@@ -30,6 +31,8 @@ function main() {
         snapshot $2 $3;
     elif [ "${command}" = "list-snapshots" ]; then
         list-snapshots $2;
+    elif [ "${command}" = "restore" ]; then
+        restore $2 $3;
     else
         echo "[error]: unknown command '${command}'" 1>&2;
         exit 1;
@@ -86,7 +89,7 @@ function status() {
 # Snapshots all qcow2 images of the environment, or just the specified image.
 #
 # arg1 (required) the snapshot tag
-# arg2 (optional) the vmid to be snapshot
+# arg2 (optional) the vmid to be snapshot. If not specified, all will be snapshot.
 #
 function snapshot() {
 
@@ -103,7 +106,7 @@ function snapshot() {
         local state
         state=$(virsh domstate ${i}) || exit 1
         if [ "${state}" != "shut off" ]; then
-           echo "'${i}' is not shut down, cannot snapshot environment" 1>&2
+           echo "'${i}' is not shut down, cannot snapshot ..." 1>&2
            exit 1
         fi
     done
@@ -141,6 +144,47 @@ function list-snapshots() {
         echo "Virtual machine: ${i}, image volume: ${image_volume}"
         qemu-img snapshot -l ${image_volume} || exit 1
         echo ""
+    done
+}
+
+#
+# Restores all (or just the specified) virtual machine qcow2 images to the given snapshot tag.
+#
+# arg1 (required) the snapshot tag
+# arg2 (optional) the vmid to be restored. If not specified, all will be restored.
+#
+function restore() {
+
+    local snapshot_tag=$1
+
+    [ -z "${snapshot_tag}" ] && { echo "[error]: a snapshot tag must be specified" 1>&2; exit 1; }
+
+    local names
+    names=$(filter $2) || exit 1
+
+    # make sure the target guests are down. If at least one is up, fail
+
+    for i in ${names}; do
+        local state
+        state=$(virsh domstate ${i}) || exit 1
+        if [ "${state}" != "shut off" ]; then
+           echo "'${i}' is not shut down, cannot restore ..." 1>&2
+           exit 1
+        fi
+    done
+
+    # list the qcow2 images
+
+    for i in ${names}; do
+        local image_volume=/main-storage-pool/${i}.qcow2
+        virsh vol-info ${image_volume} || { echo "failed to query ${image_volume}" 1>&2; exit 1; }
+    done
+
+    # restore
+
+    for i in ${names}; do
+        local image_volume=/main-storage-pool/${i}.qcow2
+        qemu-img snapshot -a ${snapshot_tag} ${image_volume} && echo "${image_volume} restored to snapshot '${snapshot_tag}'" || exit 1
     done
 }
 
