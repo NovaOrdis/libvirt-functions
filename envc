@@ -13,7 +13,7 @@ function main() {
         echo "[error]: a command must be specified" 1>&2;
         echo "available commands:" 1>&2;
         echo " start" 1>&2;
-        echo " stop" 1>&2;
+        echo " stop [vmid]" 1>&2;
         echo " status" 1>&2;
         echo " snapshot" 1>&2;
         echo " list-snapshots" 1>&2;
@@ -23,7 +23,7 @@ function main() {
     if [ "${command}" = "start" ]; then
         start;
     elif [ "${command}" = "stop" ]; then
-        stop;
+        stop $2;
     elif [ "${command}" = "status" ]; then
         status;
     elif [ "${command}" = "snapshot" ]; then
@@ -48,7 +48,12 @@ function start() {
 
 function stop() {
 
-   echo "stopping ..."
+    local vmid=$1
+
+    echo -n "stopping "; [ -z "${vmid}" ] && echo "all ..." || echo "$(vmid-to-guest-name ${vmid}) ..."
+
+    [ -n "${vmid}" ] && guests="$(vmid-to-guest-name ${vmid})"
+    [ -z "${guests}" ] && exit 1
 
     for i in ${guests}; do
         virsh shutdown ${i} || { echo "failed to shut down guest '${i}'" 1>&2; exit 1; }
@@ -115,6 +120,44 @@ function list-snapshots() {
     done
 }
 
+#
+# translation functions
+#
+
+#
+# translates vmids to guest names (example: i to in, m1 to master1, etc.)
+#
+function vmid-to-guest-name() {
+
+    local vmid=$1
+
+    [ -z "${vmid}" ] && { echo "vmid-to-guest-name(): missing vmid" 1>&2; exit 1; }
+
+    if [ "${vmid}" = "i" ]; then
+        echo "in"
+    elif [ "${vmid}" = "a" ]; then
+        echo "appproxy"
+    elif [ "${vmid}" = "s" ]; then
+        echo "support"
+    elif [ "${vmid}" = "m1" ]; then
+        echo "master1"
+    elif [ "${vmid}" = "m2" ]; then
+        echo "master2"
+    elif [ "${vmid}" = "m3" ]; then
+        echo "master3"
+    elif [ "${vmid}" = "i1" ]; then
+        echo "infranode1"
+    elif [ "${vmid}" = "i2" ]; then
+        echo "infranode2"
+    elif [ "${vmid}" = "n1" ]; then
+        echo "node1"
+    elif [ "${vmid}" = "n2" ]; then
+        echo "node2"
+    else
+        echo "vmid-to-guest-name(): unknown vmid '${vmid}'" 1>&2
+        exit 1
+    fi
+}
 
 main $@
 

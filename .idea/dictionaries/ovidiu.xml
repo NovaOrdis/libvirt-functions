@@ -2,6 +2,8 @@
   <dictionary name="ovidiu">
     <words>
       <w>qcow</w>
+      <w>vmid</w>
+      <w>vmids</w>
     </words>
   </dictionary>
 </component>
