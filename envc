@@ -16,6 +16,8 @@ function main() {
         stop;
     elif [ "${command}" = "status" ]; then
         status;
+    elif [ "${command}" = "snapshot" ]; then
+        snapshot $2;
     else
         echo "[error]: unknown command '${command}'" 1>&2;
         exit 1;
@@ -52,11 +54,11 @@ function status() {
 }
 
 #
-# Snapshots all 
+# Snapshots all qcow2 images of the environment.
 #
 function snapshot() {
 
-local snapshot_tag=$1
+    local snapshot_tag=$1
 
     [ -z "${snapshot_tag}" ] && { echo "[error]: a snapshot tag must be specified" 1>&2; exit 1; }
 
