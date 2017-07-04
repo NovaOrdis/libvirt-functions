@@ -5,5 +5,6 @@
 #
 # [ -f $(dirname $0)/libvirt-functions ] && .  $(dirname $0)/libvirt-functions || { echo "$(dirname $0)/libvirt-functions not found" 1>&2; exit 1; }
 #
+#
 
 
