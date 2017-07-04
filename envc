@@ -12,7 +12,7 @@ function main() {
 
         echo "[error]: a command must be specified" 1>&2;
         echo "available commands:" 1>&2;
-        echo " start" 1>&2;
+        echo " start [vmid]" 1>&2;
         echo " stop [vmid]" 1>&2;
         echo " status" 1>&2;
         echo " snapshot" 1>&2;
@@ -21,7 +21,7 @@ function main() {
     }
 
     if [ "${command}" = "start" ]; then
-        start;
+        start $2;
     elif [ "${command}" = "stop" ]; then
         stop $2;
     elif [ "${command}" = "status" ]; then
@@ -38,7 +38,12 @@ function main() {
 
 function start() {
 
-   echo "starting ..."
+    local vmid=$1
+
+    echo -n "starting "; [ -z "${vmid}" ] && echo "all ..." || echo "$(vmid-to-guest-name ${vmid}) ..."
+
+    [ -n "${vmid}" ] && guests="$(vmid-to-guest-name ${vmid})"
+    [ -z "${guests}" ] && exit 1
 
     for i in ${guests}; do
         virsh start ${i} || { echo "failed to start guest '${i}'" 1>&2; exit 1; }
