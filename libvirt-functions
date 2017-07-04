@@ -1,0 +1,9 @@
+#
+# See https://kb.novaordis.com/index.php/libvirt-functions
+#
+# To use, copy libvirt-funtions in the bind directory and refer it as following:
+#
+# [ -f $(dirname $0)/libvirt-functions ] && .  $(dirname $0)/libvirt-functions || { echo "$(dirname $0)/libvirt-functions not found" 1>&2; exit 1; }
+#
+
+
