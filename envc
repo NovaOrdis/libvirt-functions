@@ -81,7 +81,7 @@ function status() {
     for i in ${names}; do
         local state
         state=$(virsh domstate ${i}) || exit 1
-        echo "${i}: ${state}"
+        printf "%-30s: %s\n" "${i}" "${state}"
     done
 }
 
