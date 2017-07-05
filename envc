@@ -76,13 +76,30 @@ function main() {
 #
 function start() {
 
-    local names
-    names=$(filter $1) || exit 1
+    if [ -z "$1" ]; then
 
-    echo "starting ${names} ..."
+        #
+        # phased start up of the entire environment
+        #
+        phased-startup;
+    else
 
-    for i in ${names}; do
-        virsh start ${i} || { echo "failed to start guest '${i}'" 1>&2; exit 1; }
+        local name
+        name=$(filter $1) || exit 1
+        echo "starting ${name} ..."
+        virsh start ${name} || { echo "failed to start guest '${name}'" 1>&2; exit 1; }
+    fi
+}
+
+function phased-startup() {
+
+    echo "phased startup of the entire environment"
+    echo ""
+
+    for i in ${ALL_GUESTS}; do
+
+        (sleep $(get-startup-sleep ${i}); virsh start ${i})&
+
     done
 }
 
@@ -91,16 +108,31 @@ function start() {
 #
 function stop() {
 
-    local names
-    names=$(filter $1) || exit 1
+    if [ -z "$1" ]; then
 
-    echo "stopping ${names} ..."
+        #
+        # phased shutdown of the entire environment
+        #
+        phased-shutdown;
+    else
 
-    for i in ${names}; do
+        local name
+        name=$(filter $1) || exit 1
+        echo "stopping ${name} ..."
+        virsh shutdown ${name} || { echo "failed to shutdown guest '${name}'" 1>&2; exit 1; }
+    fi
+}
+
+function phased-shutdown() {
+
+    echo "phased shutdown of the entire environment"
+    echo ""
+
+    for i in ${ALL_GUESTS}; do
 
         (sleep $(get-shutdown-sleep ${i}); virsh shutdown ${i})&
-    done
 
+    done
 }
 
 #
@@ -335,6 +367,27 @@ function get-shutdown-sleep() {
         echo 15
     elif [ "${name}" = "support" -o "${name}" = "appproxy" -o "${name}" = "in" ]; then
         echo 20
+    else
+        echo "invalid virtual machine name '${name}'" 1>&2;
+        exit 1;
+    fi
+}
+
+function get-startup-sleep() {
+
+    local name=$1
+
+    [ -z "${name}" ] && { echo "get-startup-sleep(): name not provided" 1>&2; exit 1; }
+
+    if [ "${name}" = "node1" -o "${name}" = "node2" -o "${name}" = "infranode1" -o "${name}" = "infranode2" ]; then
+        echo 20
+    elif [ "${name}" = "master1" -o "${name}" = "master2" -o "${name}" = "master3" ]; then
+        echo 10
+    elif [ "${name}" = "appproxy" -o "${name}" = "in" ]; then
+        echo 5
+    elif [ "${name}" = "support" ]; then
+        # start immediately
+        echo 0
     else
         echo "invalid virtual machine name '${name}'" 1>&2;
         exit 1;
