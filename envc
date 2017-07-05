@@ -4,6 +4,38 @@
 
 ALL_GUESTS="in appproxy support master1 master2 master3 infranode1 infranode2 node1 node2"
 
+function display-help() {
+
+cat <<EOF
+Environment Control.
+
+Usage:
+
+    envc <command> [command-options]
+
+Commands:
+
+    start [vmid]
+
+        Starts the virtual machine specified by the ID, or the entire environment, if vmid is not specified.
+        When the entire environment is started, the startup sequence is phased: the dependencies are started
+        first, and the dependents are started after their dependencies.
+
+    stop [vmid]
+
+    status [vmid]
+
+    snapshot <snapshot_tag> [vmid]
+
+    list-snapshots [vmid]
+
+    restore <snapshot_tag> [vmid]
+
+    remove-snapshot <snapshot_tag> [vmid]
+    
+EOF
+}
+
 function main() {
 
     local command=$1
@@ -11,17 +43,7 @@ function main() {
     [ -z "${command}" ] && {
 
         echo "[error]: a command must be specified" 1>&2;
-        echo "" 1>&2;
-        echo "available commands:" 1>&2;
-        echo "" 1>&2;
-        echo " start [vmid]" 1>&2;
-        echo " stop [vmid]" 1>&2;
-        echo " status [vmid]" 1>&2;
-        echo " snapshot <snapshot_tag> [vmid]" 1>&2;
-        echo " list-snapshots [vmid]" 1>&2;
-        echo " restore <snapshot_tag> [vmid]" 1>&2;
-        echo " remove-snapshot <snapshot_tag> [vmid]" 1>&2;
-        echo "" 1>&2;
+        display-help;
         exit 1;
     }
 
