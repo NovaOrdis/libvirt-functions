@@ -23,6 +23,10 @@ Commands:
 
     stop [vmid]
 
+        Stops (shuts down) the virtual machine specified by the ID, or the entire environment, if vmid is not
+        specified. When the entire environment is stopped, the shutdown sequence is phased: the dependents are
+        stopped first, and the dependencies are stopped after their dependents.
+
     status [vmid]
 
     snapshot <snapshot_tag> [vmid]
@@ -32,7 +36,7 @@ Commands:
     restore <snapshot_tag> [vmid]
 
     remove-snapshot <snapshot_tag> [vmid]
-    
+
 EOF
 }
 
@@ -93,7 +97,8 @@ function stop() {
     echo "stopping ${names} ..."
 
     for i in ${names}; do
-        virsh shutdown ${i} || { echo "failed to shut down guest '${i}'" 1>&2; exit 1; }
+
+        (sleep $(get-shutdown-sleep ${i}); virsh shutdown ${i})&
     done
 
 }
@@ -313,8 +318,29 @@ function filter() {
     [ -z "${name}" ] && { echo "filter: '${vmid}' did not select any guest name" 1>&2; exit 1; }
 
     echo "${name}"
-
 }
+
+function get-shutdown-sleep() {
+
+    local name=$1
+
+    [ -z "${name}" ] && { echo "get-shutdown-sleep(): name not provided" 1>&2; exit 1; }
+
+    if [ "${name}" = "node1" -o "${name}" = "node2" ]; then
+        # shut down immediately
+        echo 0
+    elif [ "${name}" = "infranode1" -o "${name}" = "infranode2" ]; then
+        echo 10
+    elif [ "${name}" = "master1" -o "${name}" = "master2" -o "${name}" = "master3" ]; then
+        echo 15
+    elif [ "${name}" = "support" -o "${name}" = "appproxy" -o "${name}" = "in" ]; then
+        echo 20
+    else
+        echo "invalid virtual machine name '${name}'" 1>&2;
+        exit 1;
+    fi
+}
+
 main $@
 
 
