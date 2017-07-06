@@ -362,11 +362,11 @@ function get-shutdown-sleep() {
         # shut down immediately
         echo 0
     elif [ "${name}" = "infranode1" -o "${name}" = "infranode2" ]; then
-        echo 10
-    elif [ "${name}" = "master1" -o "${name}" = "master2" -o "${name}" = "master3" ]; then
-        echo 15
-    elif [ "${name}" = "support" -o "${name}" = "appproxy" -o "${name}" = "in" ]; then
         echo 20
+    elif [ "${name}" = "master1" -o "${name}" = "master2" -o "${name}" = "master3" ]; then
+        echo 40 
+    elif [ "${name}" = "support" -o "${name}" = "appproxy" -o "${name}" = "in" ]; then
+        echo 60 
     else
         echo "invalid virtual machine name '${name}'" 1>&2;
         exit 1;
@@ -380,11 +380,11 @@ function get-startup-sleep() {
     [ -z "${name}" ] && { echo "get-startup-sleep(): name not provided" 1>&2; exit 1; }
 
     if [ "${name}" = "node1" -o "${name}" = "node2" -o "${name}" = "infranode1" -o "${name}" = "infranode2" ]; then
-        echo 20
+        echo 90 
     elif [ "${name}" = "master1" -o "${name}" = "master2" -o "${name}" = "master3" ]; then
-        echo 10
+        echo 40 
     elif [ "${name}" = "appproxy" -o "${name}" = "in" ]; then
-        echo 5
+        echo 20 
     elif [ "${name}" = "support" ]; then
         # start immediately
         echo 0
