@@ -1,0 +1,66 @@
+#!/bin/bash
+
+export_root=/main-storage-pool/tmp
+
+function export-and-delete-image() {
+    
+    local image_name=$1
+
+    local image=/main-storage-pool/${image_name}
+
+    if [ ! -f ${image} ]; then
+        echo "filesystem image ${image} not found, won't export ..."
+        return 0
+    fi
+
+    echo "exporting ${image} ..."
+
+    virsh vol-download ${image} ${guest_root}/$(basename ${image}).download || { echo "failed to download image ${image}" 1>&2; exit 1; }
+
+    echo "compressing image ${image} ..."
+
+   (cat ${guest_root}/$(basename ${image}).download | gzip > ${guest_root}/$(basename ${image}).download.gz) || { echo "failed to compress the image" 1>&2; exit 1; }
+
+   echo "deleting the uncompressed export ${guest_root}/$(basename ${image}).download ..."
+
+   rm ${guest_root}/$(basename ${image}).download || { echo "failed to remove the uncompressed export ${guest_root}/$(basename ${image}).download" 1>&2; exit 1; }
+
+   echo "exporting volume definition ..."
+  
+   virsh vol-dumpxml ${image} > ${guest_root}/$(basename ${image}).xml || { echo "failed to export volume definition for ${image}" 1>&2; exit 1; }
+
+   echo "removing the volume from pool ..."
+
+   virsh vol-delete $(basename ${image}) --pool main-storage-pool || { echo "failed to remove image $(basename ${image}) from pool" 1>&2; exit 1; }
+}
+
+function main() {
+
+  local guest_name=$1
+  
+  [ -z "${guest_name}" ] && { echo "specify the name of the guest to export" 1>&2; exit 1; }
+
+  echo "exporting ${guest_name}, it must be shut down manually ..."
+
+  if ! virsh domstate ${guest_name} | grep -q "shut off" > /dev/null; then 
+     echo "${guest_name} is NOT down or it does not exist, fix the name or shut it down manually ..."
+     exit 1;
+  fi
+
+  local guest_root=${export_root}/${guest_name}
+
+  mkdir ${guest_root} || { echo "failed to create directory ${guest_root}" 1>&2; exit 1; }
+
+  export-and-delete-image ${guest_name}.qcow2
+  export-and-delete-image ${guest_name}-docker.raw
+
+  virsh dumpxml ${guest_name} > ${guest_root}/${guest_name}.xml || { echo "failed to dump guest ${guest_name} definition" 1>&2; exit 1; }
+
+  echo "removing guest ${guest_name} ..." 
+
+  virsh undefine ${guest_name} || { echo "failed to remove guest ${guest_name}" 1>&2; exit 1; }
+
+  echo "all done"
+}
+
+main $@
