@@ -1,6 +1,10 @@
 #!/bin/bash
 
 export_root=/main-storage-pool/tmp
+remove_volume_from_pool=true
+remove_guest=true
+has_raw_volume=true
+raw_volume_name_qualifier=docker
 
 function display-help() {
 
@@ -25,6 +29,7 @@ EOF
 function export-and-delete-image() {
     
     local image_name=$1
+    local remove_volume_from_pool=$2
 
     local image=/main-storage-pool/${image_name}
 
@@ -49,9 +54,12 @@ function export-and-delete-image() {
   
    virsh vol-dumpxml ${image} > ${guest_root}/$(basename ${image}).xml || { echo "failed to export volume definition for ${image}" 1>&2; exit 1; }
 
-   echo "removing the volume from pool ..."
+   if ${remove_volume_from_pool}; then
 
-   virsh vol-delete $(basename ${image}) --pool main-storage-pool || { echo "failed to remove image $(basename ${image}) from pool" 1>&2; exit 1; }
+       echo "removing the volume from pool ..."
+
+       virsh vol-delete $(basename ${image}) --pool main-storage-pool || { echo "failed to remove image $(basename ${image}) from pool" 1>&2; exit 1; }
+   fi
 }
 
 function main() {
@@ -71,14 +79,22 @@ function main() {
 
   mkdir ${guest_root} || { echo "failed to create directory ${guest_root}" 1>&2; exit 1; }
 
-  export-and-delete-image ${guest_name}.qcow2
-  export-and-delete-image ${guest_name}-docker.raw
+  export-and-delete-image ${guest_name}.qcow2 ${remove_volume_from_pool}
+
+  if ${has_raw_volume}; then
+
+      export-and-delete-image ${guest_name}-${raw_volume_name_qualifier}.raw ${remove_volume_from_pool}
+  fi
 
   virsh dumpxml ${guest_name} > ${guest_root}/${guest_name}.xml || { echo "failed to dump guest ${guest_name} definition" 1>&2; exit 1; }
 
-  echo "removing guest ${guest_name} ..." 
+  if ${remove_guest}; then
 
-  virsh undefine ${guest_name} || { echo "failed to remove guest ${guest_name}" 1>&2; exit 1; }
+      echo "removing guest ${guest_name} ..." 
+
+      virsh undefine ${guest_name} || { echo "failed to remove guest ${guest_name}" 1>&2; exit 1; }
+
+  fi
 
   echo "packaging guest ${guest_name} artifacts ..."
 
