@@ -1,10 +1,11 @@
 #!/bin/bash
 
 export_root=/main-storage-pool/tmp
-remove_volume_from_pool=true
-remove_guest=true
-has_raw_volume=true
-raw_volume_name_qualifier=docker
+remove_volume_from_pool=false
+remove_guest=false
+has_raw_volume=false
+#raw_volume_name_qualifier=docker
+raw_volume_name_qualifier=nfs
 
 function display-help() {
 
