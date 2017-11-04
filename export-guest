@@ -2,6 +2,26 @@
 
 export_root=/main-storage-pool/tmp
 
+function display-help() {
+
+cat <<EOF
+
+Utility that exports a virtualization guest (its definition and associated filesystems) and then
+removes the corresponding storage volumes and guest defintion from the virtualization host. The
+guest can then be fully restored based on the exported artifacts.
+
+Before executing, the script must be configured with 'export_root' and it must be inspected to make
+sure the correct storage volumes are exported - it is not sophisticated enough to insure dynamic 
+volume detection.
+
+Usage:
+
+    export-guest <guest-name>
+
+
+EOF
+}
+
 function export-and-delete-image() {
     
     local image_name=$1
@@ -38,7 +58,7 @@ function main() {
 
   local guest_name=$1
   
-  [ -z "${guest_name}" ] && { echo "specify the name of the guest to export" 1>&2; exit 1; }
+  [ -z "${guest_name}" ] && { display-help; exit 1; }
 
   echo "exporting ${guest_name}, it must be shut down manually ..."
 
